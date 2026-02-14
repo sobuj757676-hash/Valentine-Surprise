@@ -1,0 +1,9 @@
+
+> valentine-surprise@0.0.0 dev
+> vite --port 3000
+
+
+  VITE v5.4.21  ready in 271 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose

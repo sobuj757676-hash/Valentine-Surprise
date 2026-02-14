@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Heart, Lock, Unlock, Share2, Copy, Gift, Sparkles, CheckCircle, PenTool, X, Wand2, Loader2 } from 'lucide-react';
+import LZString from 'lz-string';
 
 // --- Gemini API Configuration ---
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ""; // API key will be injected by the environment
@@ -14,7 +15,7 @@ const callGeminiAPI = async (prompt, isJson = false) => {
     }
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -57,7 +58,7 @@ const callGeminiAPI = async (prompt, isJson = false) => {
 const encodeData = (data) => {
   try {
     const jsonString = JSON.stringify(data);
-    return btoa(unescape(encodeURIComponent(jsonString)));
+    return LZString.compressToEncodedURIComponent(jsonString);
   } catch (e) {
     console.error("Encoding error", e);
     return "";
@@ -66,8 +67,20 @@ const encodeData = (data) => {
 
 const decodeData = (hash) => {
   try {
-    const jsonString = decodeURIComponent(escape(atob(hash)));
-    return JSON.parse(jsonString);
+    // Try to decompress with lz-string first (new format)
+    let jsonString = LZString.decompressFromEncodedURIComponent(hash);
+
+    // If that fails (returns null/empty), try the old base64 decoding (legacy support)
+    if (!jsonString) {
+      try {
+        jsonString = decodeURIComponent(escape(atob(hash)));
+      } catch (err) {
+        console.warn("Legacy decoding failed", err);
+        return null;
+      }
+    }
+
+    return jsonString ? JSON.parse(jsonString) : null;
   } catch (e) {
     console.error("Decoding error", e);
     return null;
@@ -492,56 +505,84 @@ export default function App() {
       ) : (
         <div className="max-w-lg w-full space-y-6 animate-fadeIn pb-10">
 
-          <div className="bg-[#fff9f0] p-6 md:p-8 rounded-lg shadow-xl relative border-8 border-double border-[#d4af37] text-center">
-            <div className="absolute top-2 left-2 w-8 h-8 border-t-4 border-l-4 border-[#d4af37]"></div>
-            <div className="absolute top-2 right-2 w-8 h-8 border-t-4 border-r-4 border-[#d4af37]"></div>
-            <div className="absolute bottom-2 left-2 w-8 h-8 border-b-4 border-l-4 border-[#d4af37]"></div>
-            <div className="absolute bottom-2 right-2 w-8 h-8 border-b-4 border-r-4 border-[#d4af37]"></div>
+          <div className="bg-[#FFFBF0] p-8 md:p-10 rounded-sm shadow-2xl relative border-[12px] border-double border-[#DAA520] text-center overflow-hidden">
+             {/* Background Texture/Gradient */}
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #DAA520 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
 
-            <div className="mb-4">
-               <Heart className="mx-auto text-red-600 animate-bounce" size={40} fill="currentColor" />
+            {/* Corner Decorations */}
+            <div className="absolute top-4 left-4 w-12 h-12 border-t-[4px] border-l-[4px] border-[#B8860B]"></div>
+            <div className="absolute top-4 right-4 w-12 h-12 border-t-[4px] border-r-[4px] border-[#B8860B]"></div>
+            <div className="absolute bottom-4 left-4 w-12 h-12 border-b-[4px] border-l-[4px] border-[#B8860B]"></div>
+            <div className="absolute bottom-4 right-4 w-12 h-12 border-b-[4px] border-r-[4px] border-[#B8860B]"></div>
+
+            {/* Inner Border Frame */}
+            <div className="absolute inset-3 border border-[#DAA520]/30 pointer-events-none"></div>
+
+            <div className="mb-6 relative z-10">
+               <div className="inline-block relative">
+                 <Heart className="mx-auto text-[#8B0000] drop-shadow-md animate-pulse" size={48} fill="currentColor" />
+                 <Sparkles className="absolute -top-2 -right-4 text-[#DAA520] animate-spin-slow" size={24} />
+               </div>
             </div>
 
-            <h1 className="text-3xl font-serif font-bold text-[#8b4513] mb-2 uppercase tracking-widest">Love Agreement</h1>
-            <p className="text-gray-500 text-xs uppercase tracking-widest mb-6">Official Certificate of Relationship</p>
+            <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#8B4513] mb-2 tracking-wider drop-shadow-sm" style={{ textShadow: '1px 1px 0px rgba(218, 165, 32, 0.5)' }}>Love Agreement</h1>
 
-            <div className="font-serif italic text-lg text-gray-700 leading-relaxed mb-6">
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="h-[1px] w-12 bg-[#B8860B]"></div>
+              <p className="text-[#B8860B] text-xs font-bold uppercase tracking-[0.3em]">Official Certificate of Relationship</p>
+              <div className="h-[1px] w-12 bg-[#B8860B]"></div>
+            </div>
+
+            <div className="font-serif italic text-xl text-[#5D4037] leading-loose mb-8 relative z-10">
               এই মর্মে প্রত্যয়ন করা যাচ্ছে যে, <br/>
-              <span className="text-2xl font-bold text-pink-600 not-italic font-sans">{data.sender}</span>
-              <br/> এবং <br/>
-              <span className="text-2xl font-bold text-pink-600 not-italic font-sans">{data.receiver}</span>
-              <br/> আজীবনের জন্য একে অপরের সাথে আবদ্ধ থাকলেন।
+              <span className="text-3xl font-bold text-[#C71585] font-script px-2 drop-shadow-sm decoration-clone">{data.sender}</span>
+              <br/> <span className="text-sm text-[#B8860B]">&</span> <br/>
+              <span className="text-3xl font-bold text-[#C71585] font-script px-2 drop-shadow-sm">{data.receiver}</span>
+              <br/> আজীবনের জন্য একে অপরের সাথে <br/> <span className="font-bold text-[#8B0000] border-b-2 border-[#8B0000] pb-1">পবিত্র বন্ধনে</span> আবদ্ধ থাকলেন।
             </div>
 
-            <div className="bg-white/50 p-4 rounded border border-[#d4af37]/30 mb-6 text-left">
-              <h3 className="font-bold text-[#8b4513] mb-2 text-center underline decoration-wavy">শর্তাবলী:</h3>
-              <ul className="space-y-2 text-gray-700 text-sm">
+            <div className="bg-[#fffdf5] p-6 mx-2 rounded-lg border border-[#DAA520]/40 mb-8 text-left shadow-inner relative">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-[#FFFBF0] px-3 text-[#8B4513] font-bold border border-[#DAA520] rounded-full text-xs uppercase tracking-wider">Terms & Promises</div>
+              <ul className="space-y-3 text-[#5D4037] text-sm md:text-base mt-2">
                 {data.promises.map((promise, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-red-500 mt-1">❤️</span> {promise}
+                  <li key={i} className="flex items-start gap-3 group">
+                    <span className="text-[#C71585] mt-1 transform group-hover:scale-125 transition-transform">❦</span>
+                    <span className="border-b border-dashed border-[#DAA520]/30 pb-1 w-full">{promise}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="flex justify-between items-end mt-8 pt-4 border-t border-[#d4af37]/50">
-              <div className="text-center">
-                <div className="font-script text-2xl text-blue-600 transform -rotate-6">{data.sender}</div>
-                <div className="text-xs text-gray-400 border-t border-gray-300 mt-1 pt-1">স্বাক্ষর (Sender)</div>
+            <div className="flex justify-between items-end mt-10 pt-6 border-t-2 border-double border-[#DAA520]/50 relative">
+
+              <div className="text-center w-1/3">
+                <div className="font-script text-2xl md:text-3xl text-[#1E90FF] transform -rotate-6 mb-1">{data.sender}</div>
+                <div className="text-[10px] md:text-xs text-[#8B4513] uppercase tracking-widest border-t border-[#B8860B] mt-1 pt-1">Sender Signature</div>
               </div>
 
-              <div className="w-16 h-16 rounded-full bg-red-800 text-white flex items-center justify-center text-[10px] font-bold border-4 border-[#d4af37] shadow-inner">
-                OFFICIALLY<br/>LOVED
+              {/* Enhanced Seal */}
+              <div className="absolute left-1/2 bottom-2 transform -translate-x-1/2">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#8B0000] to-[#B22222] text-[#DAA520] flex flex-col items-center justify-center text-[10px] font-bold border-[4px] border-[#DAA520] shadow-xl relative z-10 group cursor-pointer hover:scale-105 transition-transform">
+                   <div className="absolute inset-1 border border-[#DAA520]/50 rounded-full"></div>
+                   <span className="tracking-widest text-[8px] opacity-80 uppercase mb-1">Certified</span>
+                   <Heart size={16} fill="#DAA520" className="mb-1" />
+                   <span className="leading-tight text-center drop-shadow-md">OFFICIALLY<br/>LOVED</span>
+                </div>
+                {/* Ribbon tails */}
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-8 flex justify-center z-0">
+                   <div className="w-4 h-8 bg-[#8B0000] -rotate-12 transform origin-top border-l border-[#DAA520]"></div>
+                   <div className="w-4 h-8 bg-[#8B0000] rotate-12 transform origin-top border-r border-[#DAA520]"></div>
+                </div>
               </div>
 
-              <div className="text-center">
-                <div className="font-script text-2xl text-pink-600 transform rotate-3">{data.receiver}</div>
-                <div className="text-xs text-gray-400 border-t border-gray-300 mt-1 pt-1">স্বাক্ষর (Receiver)</div>
+              <div className="text-center w-1/3">
+                <div className="font-script text-2xl md:text-3xl text-[#C71585] transform rotate-3 mb-1">{data.receiver}</div>
+                <div className="text-[10px] md:text-xs text-[#8B4513] uppercase tracking-widest border-t border-[#B8860B] mt-1 pt-1">Receiver Signature</div>
               </div>
             </div>
 
-            <div className="mt-4 text-[10px] text-gray-400">
-              Date: {data.date} • Location: In Heart
+            <div className="mt-8 text-[10px] text-[#B8860B] font-mono tracking-tighter opacity-70">
+              Registered on: {data.date} • Location: Deep in the Heart • ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}
             </div>
           </div>
 
@@ -607,6 +648,11 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fadeIn { animation: fadeIn 0.8s ease-out forwards; }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow { animation: spin-slow 8s linear infinite; }
       `}</style>
     </div>
   );
